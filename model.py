@@ -24,10 +24,14 @@ class SegmentGNN(torch.nn.Module):
 def predict(device, model, data):
     model.eval()
     # send your data to device
-    x, edge_index = data.features.to(device).float(), data.edge_index.to(device)
+    x, edge_index = data.features, data.edge_index
+    if device == torch.device("mps"):
+        x = x.to(torch.float32).to(device)
+    else :
+        x = x.float().to(device)
+    edge_index = edge_index.to(device)
     with torch.no_grad():
         logits = model(x, edge_index).squeeze(-1)   # [N]
-        
         probs  = torch.sigmoid(logits)     
         preds  = (probs > 0.5).long().cpu().numpy() # [N]
     return preds

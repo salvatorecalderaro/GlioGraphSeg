@@ -25,7 +25,15 @@ in_channels=3
 hidden_channels=512
 nclasses=1
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+def identify_device():
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+    elif torch.backends.mps.is_available():
+        device = torch.device("mps")
+    else:
+        device = torch.device("cpu")
+    return device
 
 def create_segments(image,scale,sigma,min_size):
     segments = segmentation.felzenszwalb(image,scale=scale,sigma=sigma,min_size=min_size)
@@ -74,10 +82,13 @@ def craete_rag(image, segments):
 
 
 def load_model(device):
-    model = SegmentGNN(in_channels, hidden_channels).to(device)
-    # Load weights
+    model = SegmentGNN(in_channels, hidden_channels).to(device)    # Load weights
     state_dict = torch.load(MODEL_PATH,map_location=device)
     model.load_state_dict(state_dict)
+    if device == torch.device("mps"):
+        model = model.to(torch.float32)
+    else:
+        model = model.float()
     return model
 
 
@@ -107,18 +118,21 @@ with st.sidebar:
     st.markdown("""
     ---
     ## 📄 Reference
-    
+
     This app uses a **Graph Neural Network (GNN)** to perform glioma segmentation from brain MRI images.
-    
-    **Citation**:  
+
+    **Citation:**  
     Amato, D., Calderaro, S., Lo Bosco, G., Rizzo, R., & Vella, F. (2024, December).  
     _Semantic Segmentation of Gliomas on Brain MRIs by Graph Convolutional Neural Networks_.  
-    In 2024 International Conference on AI x Data and Knowledge Engineering (AIxDKE), IEEE.
+    In 2024 International Conference on AI x Data and Knowledge Engineering (AIxDKE), IEEE.  
+    [📄 Paper Link](https://ieeexplore.ieee.org/abstract/document/10990089/)
+
     ---
     """)
 
 # Main app UI
 st.title("🧠 Glioma Image Segmentation using GNN")
+device = identify_device()
 model = load_model(device)
 model.eval()
 uploaded_file = st.file_uploader("Upload a glioma MRI image (PNG, JPG, TIFF)", type=["png", "jpg", "jpeg", "tiff"])
