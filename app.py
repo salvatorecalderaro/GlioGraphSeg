@@ -5,16 +5,14 @@ import io
 import zipfile
 import os 
 import torch
-from torch_geometric.data import Data
 from torch_geometric.utils import from_networkx
 import networkx as nx
 from skimage import segmentation, measure, graph
 
 os.environ["STREAMLIT_WATCH_MODE"] = "false"
-
-
-# Path to your logo image
 LOGO_PATH = "images/GlioGraphSeg_logo.png"
+
+
 
 scale=1
 sigma=0.8
@@ -68,23 +66,7 @@ def craete_rag(image, segments):
 
 
     
-def create_graph(image,scale,sigma,min_size):
-    """
-    Creates a Region Adjacency Graph (RAG) from an input MRI image and its corresponding mask, using superpixels and a specified SLIC algorithm parameters.
-
-    Parameters:
-    img_path (str): The path to the MRI image file.
-    mask_path (str): The path to the mask file.
-    ns (int): The desired number of superpixels to create.
-    c (int): The compactness parameter for the SLIC algorithm, which controls the size and shape of the superpixels.
-    sigma (float): The Gaussian smoothing parameter for the SLIC algorithm, which affects the spatial coherence of the superpixels.
-    plot (bool, optional): A flag indicating whether to display the plot of the original image, color mask (segmentation image), superpixel boundaries image, and graph visualization image in a 2x2 grid. Defaults to False.
-
-    Returns:
-    RAGGraph: The Region Adjacency Graph (RAG) object containing the superpixel segments, labels, mask, and graph data.
-
-    This function loads the MRI image and its corresponding mask, creates superpixels using the SLIC algorithm, assigns labels to the superpixels based on the most common label in the corresponding mask region, creates a RAG from the input image and its corresponding superpixel segments, sets the labels, mask, and segments attributes of the RAGGraph object, and optionally displays the plot.
-    """
+def create_graph(image,scale,sigma,min_size): 
     # Load the input MRI image and its corresponding mask
     image = np.array(image)
 
