@@ -1,0 +1,8 @@
+networkx==3.2.1
+numpy==2.3.0
+Pillow==11.2.1
+py_cpuinfo==9.0.0
+skimage==0.0
+streamlit==1.45.1
+torch==2.7.1
+torch_geometric==2.6.1
