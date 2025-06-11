@@ -2,14 +2,15 @@
 
 # GlioGraphSeg
 
-GlioGraphSeg is a tool for automated glioma segmentation from brain MRI scans.  
-It leverages Graph Neural Network (GNN) models to accurately identify and segment tumor regions.
+GlioGraphSeg is a deep learning-based tool for brain tumor segmentation from MRI scans.
+It uses Graph Neural Networks to model spatial relationships between regions.
+The system provides accurate glioma detection and segmentation.
 
 ---
 
 ## Try the Streamlit App
 
-👉 [Access GlioGraphSeg here](https://youraccount.streamlit.app)
+👉 [Access GlioGraphSeg here](https://gliographseg.streamlit.app)
 
 ---
 
@@ -24,8 +25,8 @@ The tool is designed to support medical professionals by providing accurate, aut
 
 If you use GlioGraphSeg in your research, please cite the following paper:
 
-> 
-> [DOI link](https://doi.org/xxxx)
+> Amato, D., Calderaro, S., Bosco, G. L., Rizzo, R., & Vella, F. (2024, December). Semantic Segmentation of Gliomas on Brain MRIs by Graph Convolutional Neural Networks. In 2024 International Conference on AI x Data and Knowledge Engineering (AIxDKE) (pp. 143-149). IEEE.
+> [DOI link](https://ieeexplore.ieee.org/abstract/document/10990089)
 
 ---
 
