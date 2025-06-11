@@ -8,6 +8,11 @@ import torch
 from torch_geometric.utils import from_networkx
 import networkx as nx
 from skimage import segmentation, measure, graph
+import platform
+import cpuinfo
+from model import SegmentGNN,predict
+from huggingface_hub import hf_hub_download
+
 
 os.environ["STREAMLIT_WATCH_MODE"] = "false"
 LOGO_PATH = "images/GlioGraphSeg_logo.png"
@@ -17,6 +22,23 @@ LOGO_PATH = "images/GlioGraphSeg_logo.png"
 scale=1
 sigma=0.8
 min_size=20
+in_channels=3
+hidden_channels=512
+nclasses=1
+
+def identify_device():
+    so = platform.system()
+    if so == "Darwin":
+        device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+        dev_name = cpuinfo.get_cpu_info()["brand_raw"]
+    else:
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        d = str(device)
+        if d == 'cuda':
+            dev_name = torch.cuda.get_device_name()
+        else:
+            dev_name = cpuinfo.get_cpu_info()["brand_raw"]
+    return device, dev_name
 
 def create_segments(image,scale,sigma,min_size):
     segments = segmentation.felzenszwalb(image,scale=scale,sigma=sigma,min_size=min_size)
@@ -86,18 +108,41 @@ def create_graph(image,scale,sigma,min_size):
     return rag_graph
 
 
+def load_model(device):
+    model = SegmentGNN(in_channels, hidden_channels, 2).to(device)
+    model_path = hf_hub_download(
+        repo_id="salvatorecalderarp/GlioGraphSeg",  # Replace with your actual HF repo
+        filename="model.pth"                      # Ensure this is the correct file name
+    )
+
+    # Load weights
+    state_dict = torch.load(model_path, map_location=device)
+    model.load_state_dict(state_dict)
+    model = model.to(device)
+    model.eval()
+    return model
+
+def build_mask_from_pred(segments,predicted_mask):
+    num_mask = np.zeros_like(segments, dtype=np.int32)
+    unique_segments = np.unique(segments)
+
+    for segment_id in unique_segments:
+        mask = (segments == segment_id)
+        label = predicted_mask[segment_id - 1] if segment_id - 1 < len(predicted_mask) else 0
+        num_mask[mask] = label
+
+    return num_mask
 
 # Placeholder segmentation function (replace with real GNN model)
 @st.cache_data
-def segment_image(image):
-    """
-    Dummy segmentation using thresholding.
-    Replace this with actual GNN model inference.
-    """
-    img_array = np.array(image.convert("L"))  # Convert to grayscale
-    mask = (img_array > 128).astype(np.uint8) * 255  # Simple threshold
-    segmented_img = Image.fromarray(mask)
-    return segmented_img, mask
+def create_mask(graph, predictions):
+    segments = graph.segments.detach().cpu().numpy()
+    pred_mask = build_mask_from_pred(segments, predictions)  # NumPy array
+
+    # Convert to image (for visualization and download)
+    mask_img = Image.fromarray((pred_mask * 255).astype(np.uint8)).convert("L")
+
+    return mask_img, pred_mask
 
 # Streamlit page configuration
 st.set_page_config(page_title="GliomGraphSeg", page_icon="🧠")
@@ -126,6 +171,9 @@ with st.sidebar:
 # Main app UI
 st.title("🧠 Glioma Image Segmentation using GNN")
 
+device,devname=identify_device()
+model = load_model(device)
+
 uploaded_file = st.file_uploader("Upload a glioma MRI image (PNG, JPG, TIFF)", type=["png", "jpg", "jpeg", "tiff"])
 
 if uploaded_file is not None:
@@ -136,22 +184,22 @@ if uploaded_file is not None:
         print(graph)
         if st.button("🩻 Segment Image"):
             with st.spinner("Segmenting image..."):
-                segmented_img, seg_mask = segment_image(image)
-
-                st.image(segmented_img, caption="🧠 Segmented Output (Mask Only)", use_container_width=True)
+                predictions = predict(device, model, graph)
+                mask_img,pred_mask = create_mask(graph,predictions)
+                st.image(mask_img, caption="🧠 Segmented Output (Mask Only)", use_container_width=True)
 
                 # Optional: overlay the mask on the original image
-                overlay = Image.blend(image, segmented_img.convert("RGB"), alpha=0.4)
+                overlay = Image.blend(image, mask_img.convert("RGB"), alpha=0.4)
                 st.image(overlay, caption="🔍 Overlay of Mask on Original Image", use_container_width=True)
 
                 # Prepare segmented image for download
                 buf_img = io.BytesIO()
-                segmented_img.save(buf_img, format="PNG")
+                mask_img.save(buf_img, format="PNG")
                 byte_img = buf_img.getvalue()
 
                 # Prepare NumPy mask for download
                 buf_mask = io.BytesIO()
-                np.save(buf_mask, seg_mask)
+                np.save(buf_mask, pred_mask)
                 buf_mask.seek(0)
 
                 # Individual download buttons

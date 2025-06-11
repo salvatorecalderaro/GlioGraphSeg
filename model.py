@@ -21,38 +21,12 @@ class SegmentGNN(torch.nn.Module):
         return x  # No Sigmoid here, use BCEWithLogitsLoss
 
 
-# Custom Dice Loss Function
-def dice_loss(pred, target, smooth=1):
-    pred = torch.sigmoid(pred)  # Apply Sigmoid
-    pred = pred.view(-1)
-    target = target.view(-1)
-    intersection = (pred * target).sum()
-    dice = (2. * intersection + smooth) / (pred.sum() + target.sum() + smooth)
-    return 1 - dice
 
-
-# Combined BCEWithLogitsLoss and Dice Loss
-class BCEDiceLoss(nn.Module):
-    def __init__(self, weight=None, pos_weight=None):
-        super(BCEDiceLoss, self).__init__()
-        self.bce = nn.BCEWithLogitsLoss(weight=weight, pos_weight=pos_weight)
-
-    def forward(self, logits, targets):
-        bce_loss = self.bce(logits, targets.float())
-        dice = dice_loss(logits, targets.float())
-        return bce_loss + dice
-
-
-
-def predict(device, model, testloader):
+def predict(device, model, data):
     model.eval()
-    predictions = []
     with torch.no_grad():
-        for i, data in enumerate(testloader):
-            data = data.to(device)
-            out = model(data)
-            out = torch.round(torch.sigmoid(out))  # Apply Sigmoid for predictions
-            predictions.append(out.detach().cpu().numpy())
-    return predictions
-    
-
+        data = data.to(device)
+        out = model(data)
+        out = torch.round(torch.sigmoid(out))  # Binary classification (0 or 1)
+        prediction = out.detach().cpu().numpy()
+    return prediction
