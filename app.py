@@ -3,9 +3,15 @@ import numpy as np
 from PIL import Image
 import io
 import zipfile
+from img2graph import craete_graph
 
 # Path to your logo image
 LOGO_PATH = "images/GlioGraphSeg_logo.png"
+
+scale=1
+sigma=0.8
+min_size=20
+
 
 # Placeholder segmentation function (replace with real GNN model)
 @st.cache_data
@@ -52,7 +58,8 @@ if uploaded_file is not None:
     try:
         image = Image.open(uploaded_file).convert("RGB")
         st.image(image, caption="🖼️ Uploaded Image", use_container_width=True)
-
+        graph = craete_graph(image,scale,sigma,min_size)
+        print(graph)
         if st.button("🩻 Segment Image"):
             with st.spinner("Segmenting image..."):
                 segmented_img, seg_mask = segment_image(image)
