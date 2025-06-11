@@ -105,7 +105,7 @@ def create_mask(segments, predicted_mask):
 
     return num_mask
 # Streamlit page configuration
-st.set_page_config(page_title="GliomGraphSeg", page_icon="🧠")
+st.set_page_config(page_title="GliomGraphSeg", page_icon=LOGO_PATH)
 
 # Sidebar with logo and reference
 with st.sidebar:
