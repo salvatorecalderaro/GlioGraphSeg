@@ -11,11 +11,10 @@ from skimage import segmentation, measure, graph
 import platform
 import cpuinfo
 from model import SegmentGNN,predict
-from huggingface_hub import hf_hub_download
-
 
 os.environ["STREAMLIT_WATCH_MODE"] = "false"
 LOGO_PATH = "images/GlioGraphSeg_logo.png"
+MODEL_PATH = "model.pth"
 
 
 
@@ -26,19 +25,7 @@ in_channels=3
 hidden_channels=512
 nclasses=1
 
-def identify_device():
-    so = platform.system()
-    if so == "Darwin":
-        device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
-        dev_name = cpuinfo.get_cpu_info()["brand_raw"]
-    else:
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        d = str(device)
-        if d == 'cuda':
-            dev_name = torch.cuda.get_device_name()
-        else:
-            dev_name = cpuinfo.get_cpu_info()["brand_raw"]
-    return device, dev_name
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def create_segments(image,scale,sigma,min_size):
     segments = segmentation.felzenszwalb(image,scale=scale,sigma=sigma,min_size=min_size)
@@ -86,64 +73,26 @@ def craete_rag(image, segments):
 
 
 
-
-    
-def create_graph(image,scale,sigma,min_size): 
-    # Load the input MRI image and its corresponding mask
-    image = np.array(image)
-
-    # Create superpixels from the input image using the SLIC algorithm
-    segments, boundaries = create_segments(image,scale,sigma,min_size)
-
-
-    # Create a Region Adjacency Graph (RAG) from the input image and its corresponding superpixel segments
-    rag_graph, centers, nx_graph = craete_rag(image, segments)
-
-    # Set the labels, mask, and segments attributes of the RAGGraph object
-    rag_graph.segments = torch.tensor(segments)
-
-
-    # If the plot parameter is set to True, display the plot of the original image, color mask (segmentation image), superpixel boundaries image, and graph visualization image in a 2x2 grid
-
-    return rag_graph
-
-
 def load_model(device):
-    model = SegmentGNN(in_channels, hidden_channels, 2).to(device)
-    model_path = hf_hub_download(
-        repo_id="salvatorecalderarp/GlioGraphSeg",  # Replace with your actual HF repo
-        filename="model.pth"                      # Ensure this is the correct file name
-    )
-
+    model = SegmentGNN(in_channels, hidden_channels).to(device)
     # Load weights
-    state_dict = torch.load(model_path, map_location=device)
+    state_dict = torch.load(MODEL_PATH,map_location=device)
     model.load_state_dict(state_dict)
-    model = model.to(device)
-    model.eval()
     return model
 
-def build_mask_from_pred(segments,predicted_mask):
+
+# Placeholder segmentation function (replace with real GNN model)
+
+def create_mask(segments, predicted_mask):
     num_mask = np.zeros_like(segments, dtype=np.int32)
     unique_segments = np.unique(segments)
-
+    
     for segment_id in unique_segments:
         mask = (segments == segment_id)
         label = predicted_mask[segment_id - 1] if segment_id - 1 < len(predicted_mask) else 0
         num_mask[mask] = label
 
     return num_mask
-
-# Placeholder segmentation function (replace with real GNN model)
-@st.cache_data
-def create_mask(graph, predictions):
-    segments = graph.segments.detach().cpu().numpy()
-    pred_mask = build_mask_from_pred(segments, predictions)  # NumPy array
-
-    # Convert to image (for visualization and download)
-    mask_img = Image.fromarray((pred_mask * 255).astype(np.uint8)).convert("L")
-
-    return mask_img, pred_mask
-
 # Streamlit page configuration
 st.set_page_config(page_title="GliomGraphSeg", page_icon="🧠")
 
@@ -170,26 +119,34 @@ with st.sidebar:
 
 # Main app UI
 st.title("🧠 Glioma Image Segmentation using GNN")
-
-device,devname=identify_device()
 model = load_model(device)
-
+model.eval()
 uploaded_file = st.file_uploader("Upload a glioma MRI image (PNG, JPG, TIFF)", type=["png", "jpg", "jpeg", "tiff"])
 
 if uploaded_file is not None:
     try:
-        image = Image.open(uploaded_file).convert("RGB")
+        image = Image.open(uploaded_file)
         st.image(image, caption="🖼️ Uploaded Image", use_container_width=True)
-        graph = create_graph(image,scale,sigma,min_size)
-        print(graph)
+        segments, boundaries = create_segments(np.array(image),scale,sigma,min_size)
+        data,centers,G = craete_rag(np.array(image),segments)
+        data.segments = torch.tensor(segments)
         if st.button("🩻 Segment Image"):
             with st.spinner("Segmenting image..."):
-                predictions = predict(device, model, graph)
-                mask_img,pred_mask = create_mask(graph,predictions)
-                st.image(mask_img, caption="🧠 Segmented Output (Mask Only)", use_container_width=True)
-
+                predictions = predict(device, model, data)          
+                pred_mask = create_mask(data.segments, predictions)
+                st.image((pred_mask * 255).astype(np.uint8), caption="🧠 Segmented Output (Mask Only)", use_container_width=True)
+                mask_img = (pred_mask * 255).astype(np.uint8)
+                mask_img = Image.fromarray(mask_img)
                 # Optional: overlay the mask on the original image
-                overlay = Image.blend(image, mask_img.convert("RGB"), alpha=0.4)
+                if mask_img.size != image.size:
+                    mask_img = mask_img.resize(image.size, resample=Image.NEAREST)
+
+                # Convert mask image to same mode as original image
+                if mask_img.mode != image.mode:
+                    mask_img = mask_img.convert(image.mode)
+
+                
+                overlay = Image.blend(image, mask_img, alpha=0.4)
                 st.image(overlay, caption="🔍 Overlay of Mask on Original Image", use_container_width=True)
 
                 # Prepare segmented image for download
