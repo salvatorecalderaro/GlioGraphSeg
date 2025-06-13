@@ -136,7 +136,13 @@ device = identify_device()
 model = load_model(device)
 model.eval()
 uploaded_file = st.file_uploader("Upload a glioma MRI image (PNG, JPG, TIFF)", type=["png", "jpg", "jpeg", "tiff"])
-
+st.markdown(
+    "<span style='color:gray; font-size:0.9em;'>"
+    "ℹ️ For best results, upload a **RGB image composed of three MRI modalities** in the following channel order: "
+    "**Red = pre-contrast**, **Green = FLAIR**, **Blue = post-contrast**."
+    "</span>",
+    unsafe_allow_html=True
+)
 if uploaded_file is not None:
     try:
         image = Image.open(uploaded_file)
