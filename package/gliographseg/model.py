@@ -24,7 +24,7 @@ class SegmentGNN(torch.nn.Module):
 def predict(device, model, data):
     model.eval()
     # send your data to device
-    x, edge_index = data.features, data.edge_index
+    x, edge_index = data.x, data.edge_index
     if device == torch.device("mps"):
         x = x.to(torch.float32).to(device)
     else :

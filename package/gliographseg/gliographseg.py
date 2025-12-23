@@ -6,51 +6,36 @@ import networkx as nx
 from PIL import Image
 from skimage import segmentation, measure, graph
 from torch_geometric.utils import from_networkx
-from .model import SegmentGNN, predict
+from .model import SegmentGNN, predict  # la tua classe e funzione di prediction
 
 class GlioGraphSeg:
-    """
-    Graph-based image segmentation using Superpixels + GNN
-    """
+    """Graph-based image segmentation using Superpixels + GNN"""
 
-    def __init__(
-        self,
-        model_class,
-        model_path=None,
-        in_channels=3,
-        hidden_channels=512,
-        scale=1,
-        sigma=0.8,
-        min_size=20,
-        device=None
-    ):
+    def __init__(self, model_path=None, in_channels=3, hidden_channels=512,
+                 scale=1, sigma=0.8, min_size=20, device=None):
         self.scale = scale
         self.sigma = sigma
         self.min_size = min_size
+        self.in_channels = in_channels
+        self.hidden_channels = hidden_channels
 
+        # DEVICE
         self.device = device or self._identify_device()
 
-        # 👇 MODEL PATH DI DEFAULT
+        # MODEL PATH DEFAULT
         self.model_path = model_path or self._default_model_path()
 
-        self.model = self._load_model(
-            model_class,
-            self.model_path,
-            in_channels,
-            hidden_channels
-        )
+        # CARICA IL MODELLO
+        self.model = self._load_model()
 
     # --------------------------------------------------
     # DEFAULT MODEL PATH
     # --------------------------------------------------
     def _default_model_path(self):
         base_dir = os.path.dirname(os.path.abspath(__file__))
-        path = os.path.join(base_dir, "segmentgnn.pth")
-
+        path = os.path.join(base_dir, "model.pth")
         if not os.path.exists(path):
-            raise FileNotFoundError(
-                f"Default model not found at {path}"
-            )
+            raise FileNotFoundError(f"Default model not found at {path}")
         return path
 
     # --------------------------------------------------
@@ -65,16 +50,18 @@ class GlioGraphSeg:
             return torch.device("cpu")
 
     # --------------------------------------------------
-    # MODEL
+    # CARICA MODELLO
     # --------------------------------------------------
-    def _load_model(self, model_class, model_path, in_channels, hidden_channels):
-        model = SegmentGNN(in_channels, hidden_channels)
-
-        state_dict = torch.load(model_path, map_location=self.device)
+    def _load_model(self):
+        model = SegmentGNN(self.in_channels, self.hidden_channels)
+        state_dict = torch.load(self.model_path, map_location=self.device)
         model.load_state_dict(state_dict)
-
-        model = model.to(torch.float32)
-        model.eval()
+        if self.device == torch.device("mps"):
+            model = model.to(torch.float32)
+        else:
+            model = model.float()
+        self.model = model.to(self.device)
+        self.model.eval()
         return model
 
     # --------------------------------------------------
@@ -82,10 +69,7 @@ class GlioGraphSeg:
     # --------------------------------------------------
     def _create_segments(self, image):
         return segmentation.felzenszwalb(
-            image,
-            scale=self.scale,
-            sigma=self.sigma,
-            min_size=self.min_size
+            image, scale=self.scale, sigma=self.sigma, min_size=self.min_size
         ) + 1
 
     # --------------------------------------------------
@@ -94,13 +78,10 @@ class GlioGraphSeg:
     def _create_rag(self, image, segments):
         rag = graph.rag_mean_color(image, segments, mode="similarity")
         G = nx.Graph()
-
         for node in rag.nodes:
             G.add_node(node, x=list(rag.nodes[node]["mean color"]))
-
         for u, v in rag.edges:
             G.add_edge(u, v)
-
         data = from_networkx(G)
         centers = [p.centroid for p in measure.regionprops(segments)]
         return data, centers, G
@@ -127,10 +108,16 @@ class GlioGraphSeg:
 
         segments = self._create_segments(image)
         data, centers, G = self._create_rag(image, segments)
+        
+        if self.device == torch.device("mps"):
+            data.x = data.x.to(torch.float32)
+        else:
+            data.x = data.x.float()
 
         data = data.to(self.device)
-
+        print(data)
         preds = predict(self.device, self.model, data)
+        print(preds)
         mask = self._create_mask(segments, preds)
 
         return {
