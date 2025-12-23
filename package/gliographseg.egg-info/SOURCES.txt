@@ -1,0 +1,12 @@
+LICENSE
+README.md
+pyproject.toml
+gliographseg/__init__.py
+gliographseg/gliographseg.py
+gliographseg/model.pth
+gliographseg/model.py
+gliographseg.egg-info/PKG-INFO
+gliographseg.egg-info/SOURCES.txt
+gliographseg.egg-info/dependency_links.txt
+gliographseg.egg-info/requires.txt
+gliographseg.egg-info/top_level.txt

@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,23 +7,21 @@ name = "gliographseg"
 version = "0.1.0"
 description = "Graph-based brain tumor segmentation using superpixels and GNNs"
 readme = "README.md"
-license = { file = "LICENSE" }
-authors = [
-  { name="Salvatore Calderaro" }
-]
+license = "MIT"
+authors = [{ name = "Salvatore Calderaro" }]
 dependencies = [
   "torch",
   "torch-geometric",
   "numpy",
   "networkx",
   "scikit-image",
-  "Pillow",
-  "nvidia-ml-py"
+  "Pillow"
 ]
 requires-python = ">=3.8"
 
-[tool.setuptools]
-packages = ["package.gliographseg"]
+[tool.setuptools.packages.find]
+where = ["."]
+exclude = ["tests*"]
 
 [tool.setuptools.package-data]
-"package.gliographseg" = ["segmentgnn.pth"]
+gliographseg = ["*.pth"]
