@@ -1,4 +1,4 @@
-![GlioGraphSeg Logo](GlioGraphSeg_logo.png)
+![GlioGraphSeg Logo](gliographseg/GlioGraphSeg_logo.png)
 
 # GlioGraphSeg
 
