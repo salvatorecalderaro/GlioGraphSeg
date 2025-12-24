@@ -7,14 +7,29 @@ It uses Graph Neural Networks to model spatial relationships between regions.
 The system provides accurate glioma detection and segmentation.
 
 ---
-# Python Package
-```bash
-pip install gliographseg
-```![PyPI Downloads](https://static.pepy.tech/personalized-badge/gliographseg?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads)](https://pepy.tech/projects/gliographseg)
+![GlioGraphSeg Logo](images/GlioGraphSeg_logo.png)
+
+# GlioGraphSeg
+
+GlioGraphSeg is a deep learning-based framework for **brain tumor (glioma) segmentation from MRI scans**.  
+It leverages **Graph Neural Networks (GNNs)** to model spatial and structural relationships between image regions, enabling accurate and robust tumor delineation.
+
+The project is designed for **medical image analysis**, combining graph-based representations with modern deep learning techniques.
 
 ---
 
-## Try the Streamlit App
+## 📦 Python Package
+
+Install the package directly from PyPI:
+
+```bash
+pip install gliographseg
+
+[![PyPI Downloads](https://static.pepy.tech/personalized-badge/gliographseg?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads)](https://pepy.tech/projects/gliographseg)
+
+---
+
+# Try the Streamlit App
 
 👉 [Access GlioGraphSeg here](https://gliographseg.streamlit.app)
 
